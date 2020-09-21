@@ -1,4 +1,4 @@
-﻿// MainTabWindow_ResearchTree.cs
+﻿// Tabbed_MainTabWindow_ResearchTree.cs
 // Copyright Karel Kroeze, 2020-2020
 
 using System.Collections.Generic;
@@ -15,9 +15,10 @@ namespace FluffyResearchTree
     using System.Runtime.Serialization.Formatters.Binary;
     using global::ResearchTree;
 
-    public class MainTabWindow_ResearchTree : MainTabWindow
+    public class Tabbed_MainTabWindow_ResearchTree : MainTabWindow
     {
         internal static Vector2 _scrollPosition = Vector2.zero;
+        internal static Vector2 _tabScrollPosition = Vector2.zero;
 
 
         private Rect _baseViewRect;
@@ -28,6 +29,7 @@ namespace FluffyResearchTree
 
         private string _query = "";
         private Rect   _viewRect;
+        private Rect   _tabViewRect;
 
         private Rect _viewRect_Inner;
         private bool _viewRect_InnerDirty = true;
@@ -37,13 +39,15 @@ namespace FluffyResearchTree
 
         private bool _showTabs;
 
-        public MainTabWindow_ResearchTree()
+        private Resolution _screenSize;
+
+        public Tabbed_MainTabWindow_ResearchTree()
         {
             closeOnClickedOutside = false;
             Instance              = this;
         }
 
-        public static MainTabWindow_ResearchTree Instance { get; private set; }
+        public static Tabbed_MainTabWindow_ResearchTree Instance { get; private set; }
 
         public float ScaledMargin => Constants.Margin * ZoomLevel / Prefs.UIScale;
 
@@ -166,9 +170,9 @@ namespace FluffyResearchTree
             // tree view rects, have to deal with UIScale and ZoomLevel manually.
             _baseViewRect = new Rect(
                 StandardMargin                                            / Prefs.UIScale,
-                ( TopBarHeight*2 + Constants.Margin + StandardMargin )      / Prefs.UIScale,
-                ( Screen.width                    - StandardMargin * 2f ) / Prefs.UIScale,
-                ( Screen.height - MainButtonDef.ButtonHeight - StandardMargin * 2f - TopBarHeight*2 - Constants.Margin ) /
+                ( TopBarHeight + Constants.Margin + StandardMargin )      / Prefs.UIScale,
+                ( Screen.width         -(_showTabs?255:0)           - StandardMargin * 2f ) / Prefs.UIScale,
+                ( Screen.height - MainButtonDef.ButtonHeight - StandardMargin * 2f - TopBarHeight - Constants.Margin ) /
                 Prefs.UIScale );
             _baseViewRect_Inner = _baseViewRect.ContractedBy( Constants.Margin / Prefs.UIScale );
 
@@ -177,6 +181,9 @@ namespace FluffyResearchTree
             windowRect.y      = 0f;
             windowRect.width  = UI.screenWidth;
             windowRect.height = UI.screenHeight - MainButtonDef.ButtonHeight;
+
+            _screenSize = Screen.currentResolution;
+            _viewRectDirty = true;
         }
 
         public override void DoWindowContents( Rect canvas )
@@ -184,24 +191,33 @@ namespace FluffyResearchTree
             if ( Tree.ActiveTree == null || !Tree.ActiveTree.Initialized )
                 return;
 
+            if (!_screenSize.Equals(Screen.currentResolution))
+            {
+                SetRects();
+            }
 
-            // top bar
-            var tabBarRect = new Rect(
+            Rect verticalTabBar = Rect.zero;
+            if (_showTabs)
+            {
+                    verticalTabBar = new Rect(
+                    canvas.xMax - 250,
+                    TopBarHeight + Constants.Margin,
+                    250,
+                    canvas.height - TopBarHeight - Constants.Margin);
+
+                DrawTabBar(verticalTabBar);
+            }
+
+            var topRect = new Rect(
                 canvas.xMin,
                 canvas.yMin,
                 canvas.width,
-                TopBarHeight/2 );
-            DrawTabBar(tabBarRect);
-            var topRect = new Rect(
-                canvas.xMin,
-                tabBarRect.yMax+Margin,
-                tabBarRect.width,
                 TopBarHeight);
             DrawTopBar( topRect );
 
             ApplyZoomLevel();
 
-            // draw background
+          // draw background
             GUI.DrawTexture( ViewRect, Assets.SlightlyDarkBackground );
 
             // draw the actual tree
@@ -219,18 +235,19 @@ namespace FluffyResearchTree
                 Tree.ActiveTree.Draw( VisibleRect );
             Queue.DrawLabels( VisibleRect );
 
-            HandleZoom();
+            HandleZoom(verticalTabBar);
+
+            Log.Debug(verticalTabBar.Contains(Event.current.mousePosition)?"in":"out");
 
             GUI.EndGroup();
             GUI.EndScrollView( false );
 
-            HandleDragging(topRect);
+            HandleDragging(topRect, verticalTabBar);
             HandleDolly();
 
             // reset zoom level
             ResetZoomLevel();
-
-
+            
             // cleanup;
             GUI.color   = Color.white;
             Text.Anchor = TextAnchor.UpperLeft;
@@ -239,36 +256,92 @@ namespace FluffyResearchTree
         private void DrawTabBar(Rect canvas)
         {
             Profiler.Start("Tree.DrawTab");
-          
 
             var pos = canvas.min;
 
             var tabAmount = Tree.Tabs.Count;
             var resolution = UI.screenWidth;
-            var size = Mathf.Min(NodeSize.x + Margin, (resolution - 2 * Margin) / tabAmount);
-            Tree.ActiveTree.DrawSave(new Rect(
-                pos.x,
-                pos.y,
-                size,
-                NodeSize.y / 2 + Margin));
-            pos.x += size;
+            var size = 250;//Mathf.Min(NodeSize.x + Margin, (resolution - 2 * Margin) / tabAmount);
+            // Tree.ActiveTree.DrawSave(new Rect(
+            //     pos.x,
+            //     pos.y,
+            //     size,
+            //     NodeSize.y / 2 + Margin));
+            // pos.y += NodeSize.y;
+            // tabCanvas.xMin += pos.x;
+            // canvas.yMin += NodeSize.y;
 
-            for (var i = 0; i < Tree.Tabs.Count && pos.x + NodeSize.x < canvas.xMax; i++)
+            GUI.DrawTexture(canvas, Assets.SlightlyDarkBackground);
+
+            _tabViewRect = new Rect(
+                canvas.x,
+                canvas.y,
+                250,
+                Tree.Tabs.Count * NodeSize.y + Margin);
+            // draw the actual tree
+            // TODO: stop scrollbars scaling with zoom
+            _tabScrollPosition = GUI.BeginScrollView(canvas, _tabScrollPosition, _tabViewRect,GUIStyle.none, GUIStyle.none);
+            GUI.BeginGroup(_tabViewRect);
+            var y = 0f;
+
+            for (var i = 0; i < Tree.Tabs.Count; i++)
             {
+         
                 var node = Tree.Trees[Tree.Tabs[i].defName];
                 var rect = new Rect(
-                    pos.x ,
-                    pos.y ,
+                    0,
+                    y,
                     size,
-                    NodeSize.y/2 + Margin
+                    NodeSize.y / 2 + Margin
                 );
 
                 node.DrawTab(rect);
 
-                pos.x += size;
+                y += NodeSize.y;
+                
             }
 
+            GUI.EndGroup();
+
+            GUI.EndScrollView(true);
+
+         
+
             Profiler.End();
+        }
+
+        
+        public void DrawTabsToggle(Rect visibleRect)
+        {
+            var mouseOver = Mouse.IsOver(visibleRect);
+            if (Event.current.type == EventType.Repaint)
+            {
+                GUI.color = mouseOver ? GenUI.MouseoverColor : Assets.ColorCompleted[TechLevel.Neolithic];
+
+                if (mouseOver)
+                    GUI.DrawTexture(visibleRect, Assets.ButtonActive);
+                else
+                    GUI.DrawTexture(visibleRect, Assets.Button);
+
+                GUI.color = Assets.ColorAvailable[TechLevel.Neolithic];
+
+                GUI.color = Color.white;
+
+                Text.Anchor = TextAnchor.MiddleCenter;
+                Text.WordWrap = false;
+                Text.Font = visibleRect.width > 100 ? GameFont.Small : GameFont.Tiny;
+                Widgets.Label(visibleRect, _showTabs?">>":"<<");
+
+            }
+
+            var btn = Widgets.ButtonInvisible(visibleRect);
+
+            if (btn)
+            {
+                _showTabs = !_showTabs;
+                SetRects();
+            }
+
         }
 
         private void HandleDolly()
@@ -285,18 +358,21 @@ namespace FluffyResearchTree
         }
 
 
-        private void HandleZoom()
+        private void HandleZoom(Rect tabRect)
         {
+            // relative normalized position of mouse on visible tree
+            var relPos = (Event.current.mousePosition - _scrollPosition) / ZoomLevel;
+            // Log.Debug( "Normalized position: {0}", relPos );
+
+
+
+            // Log.Debug((relPos).ToString());
             // handle zoom
-            if ( Event.current.isScrollWheel )
+            if ( Event.current.isScrollWheel && !tabRect.Contains(relPos))
             {
                 // absolute position of mouse on research tree
                 var absPos = Event.current.mousePosition;
                 // Log.Debug( "Absolute position: {0}", absPos );
-
-                // relative normalized position of mouse on visible tree
-                var relPos = ( Event.current.mousePosition - _scrollPosition ) / ZoomLevel;
-                // Log.Debug( "Normalized position: {0}", relPos );
 
                 // update zoom level
                 ZoomLevel += Event.current.delta.y * ZoomStep * ZoomLevel;
@@ -306,12 +382,24 @@ namespace FluffyResearchTree
 
                 Event.current.Use();
             }
+
+            // handle zoom
+            if (Event.current.isScrollWheel && tabRect.Contains(relPos))
+            {
+
+                _tabScrollPosition += Event.current.delta;
+
+                Event.current.Use();
+            }
+
+
         }
 
 
-        private void HandleDragging(Rect topRect)
+        private void HandleDragging(Rect topRect,Rect tabRect)
         {
             var inTopRect = topRect.Contains(Event.current.mousePosition);
+            var inTabRect = tabRect.Contains((Event.current.mousePosition - _scrollPosition) / ZoomLevel);
             if ( Event.current.type == EventType.MouseDown && !inTopRect)
             {
                 _dragging      = true;
@@ -327,6 +415,13 @@ namespace FluffyResearchTree
                 Event.current.Use();
             }
 
+            //Dragging Tabs
+            if (Event.current.type == EventType.MouseDown && inTabRect)
+            {
+                _dragging = true;
+                _mousePosition = Event.current.mousePosition;
+                Event.current.Use();
+            }
 
 
             if ( Event.current.type == EventType.MouseUp )
@@ -335,12 +430,21 @@ namespace FluffyResearchTree
                 _mousePosition = Vector2.zero;
             }
 
-            if ( Event.current.type == EventType.MouseDrag && !inTopRect)
+            if ( Event.current.type == EventType.MouseDrag && !inTopRect && !inTabRect)
             {
                 var _currentMousePosition = Event.current.mousePosition;
                 _scrollPosition += _mousePosition - _currentMousePosition;
                 _mousePosition  =  _currentMousePosition;
             }
+
+            //Dragging Tabs
+            if (Event.current.type == EventType.MouseDrag && inTabRect)
+            {
+                var _currentMousePosition = Event.current.mousePosition;
+                _tabScrollPosition += _mousePosition - _currentMousePosition;
+                _mousePosition = _currentMousePosition;
+            }
+         
         }
 
         private void ApplyZoomLevel()
@@ -366,12 +470,19 @@ namespace FluffyResearchTree
             var queueRect  = canvas;
             searchRect.width =  200f;
             queueRect.xMin   += 200f + Constants.Margin;
+            queueRect.xMax -= 100f+Constants.Margin;
+            var toggleRect = new Rect(queueRect.xMax + Constants.Margin, queueRect.yMin, 100, queueRect.height); // {height = 50, width = 50, xMin = queueRect.xMax}
+
 
             GUI.DrawTexture( searchRect, Assets.SlightlyDarkBackground );
             GUI.DrawTexture( queueRect, Assets.SlightlyDarkBackground );
 
             DrawSearchBar( searchRect.ContractedBy( Constants.Margin ) );
             Queue.DrawQueue( queueRect.ContractedBy( Constants.Margin ), !_dragging );
+            GUI.DrawTexture(toggleRect, Assets.SlightlyDarkBackground);
+
+            DrawTabsToggle(toggleRect.ContractedBy(Constants.Margin*2));
+
         }
 
         private void DrawSearchBar( Rect canvas )

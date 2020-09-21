@@ -326,7 +326,7 @@ namespace FluffyResearchTree
                 node.RealQueueRect = rect;
                 node.DrawAt(pos, node.RealQueueRect, true);
                 if (interactible && Mouse.IsOver(rect))
-                    MainTabWindow_ResearchTree.Instance.CenterOn(node);
+                    Tabbed_MainTabWindow_ResearchTree.Instance.CenterOn(node);
                 pos.x += NodeSize.x + Margin;
             }
 

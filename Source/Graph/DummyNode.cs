@@ -23,8 +23,8 @@ namespace FluffyResearchTree
         public override void Draw()
         {
             // cop out if off-screen
-            var screen = new Rect( MainTabWindow_ResearchTree._scrollPosition.x,
-                                   MainTabWindow_ResearchTree._scrollPosition.y, Screen.width, Screen.height - 35 );
+            var screen = new Rect( Tabbed_MainTabWindow_ResearchTree._scrollPosition.x,
+                                   Tabbed_MainTabWindow_ResearchTree._scrollPosition.y, Screen.width, Screen.height - 35 );
             if ( Rect.xMin > screen.xMax ||
                  Rect.xMax < screen.xMin ||
                  Rect.yMin > screen.yMax ||

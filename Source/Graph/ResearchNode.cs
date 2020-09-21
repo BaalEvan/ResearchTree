@@ -210,7 +210,7 @@ namespace FluffyResearchTree
             }
 
             var detailedMode = forceDetailedMode ||
-                               MainTabWindow_ResearchTree.Instance.ZoomLevel < DetailedModeZoomLevelCutoff;
+                               Tabbed_MainTabWindow_ResearchTree.Instance.ZoomLevel < DetailedModeZoomLevelCutoff;
             var mouseOver = Mouse.IsOver( Rect );
             if ( Event.current.type == EventType.Repaint )
             {
@@ -245,7 +245,7 @@ namespace FluffyResearchTree
                     Text.Anchor   = TextAnchor.UpperLeft;
                     Text.WordWrap = false;
                     Text.Font     = _largeLabel ? GameFont.Tiny : GameFont.Small;
-                    Widgets.Label( LabelRect, Research.tab.defName+" - "+Research.LabelCap );
+                    Widgets.Label( LabelRect, Research.LabelCap );
                 }
                 else
                 {

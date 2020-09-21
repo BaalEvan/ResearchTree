@@ -1,4 +1,4 @@
-﻿// MainButtonWorker_ResearchTree.cs
+﻿// Tabbed_MainButtonWorker_ResearchTree.cs
 // Copyright Karel Kroeze, 2018-2020
 
 using RimWorld;
@@ -7,7 +7,7 @@ using Verse;
 
 namespace FluffyResearchTree
 {
-    public class MainButtonWorker_ResearchTree : MainButtonWorker_ToggleResearchTab
+    public class Tabbed_MainButtonWorker_ResearchTree : MainButtonWorker_ToggleResearchTab
     {
         public override void DoButton( Rect rect )
         {

@@ -77,10 +77,10 @@
     <Compile Include="Graph\FakeResearchNode.cs" />
     <Compile Include="Graph\ResearchNode.cs" />
     <Compile Include="Log.cs" />
-    <Compile Include="MainButtonWorker_ResearchTree.cs" />
+    <Compile Include="Tabbed_MainButtonWorker_ResearchTree.cs" />
     <Compile Include="Profiler.cs" />
     <Compile Include="Queue\Queue.cs" />
-    <Compile Include="MainTabWindow_ResearchTree.cs" />
+    <Compile Include="Tabbed_MainTabWindow_ResearchTree.cs" />
     <Compile Include="Graph\Node.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Extensions\ResearchProjectDef_Extensions.cs" />

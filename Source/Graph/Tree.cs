@@ -300,7 +300,7 @@ namespace FluffyResearchTree
                 false, null);
 
             // tell research tab we're ready
-            LongEventHandler.QueueLongEvent(MainTabWindow_ResearchTree.Instance.Notify_TreeInitialized,
+            LongEventHandler.QueueLongEvent(Tabbed_MainTabWindow_ResearchTree.Instance.Notify_TreeInitialized,
                 "Fluffy.ResearchTree.RestoreQueue." + TabName, false, null);
 
         }

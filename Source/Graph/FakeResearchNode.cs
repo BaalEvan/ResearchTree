@@ -22,7 +22,7 @@ namespace ResearchTree.Graph
         {
             Tree.ActiveTree = Tree.Trees[LinkedNode.Research.tab.defName];
             Tree.ActiveTree.Initialize();
-            MainTabWindow_ResearchTree.Instance.CenterOn(LinkedNode);
+            Tabbed_MainTabWindow_ResearchTree.Instance.CenterOn(LinkedNode);
 
             
         }
