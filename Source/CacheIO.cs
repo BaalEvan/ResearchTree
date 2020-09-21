@@ -22,7 +22,7 @@ namespace ResearchTree
 
         public static bool VerifyHash()
         {
-            return AnyModChanges(LoadHash());
+            return !AnyModChanges(LoadHash());
         }
 
         private static bool AnyModChanges(string oldHash)
@@ -89,7 +89,7 @@ namespace ResearchTree
         {
             SaveHash();
 
-            FileStream fs = new FileStream(GetCachePatchForTab(tabTree.TabName), FileMode.CreateNew);
+            FileStream fs = new FileStream(GetCachePatchForTab(tabTree.TabName), FileMode.Truncate);
             BinaryFormatter bf = new BinaryFormatter();
             var surrogates = new SurrogateSelector();
             surrogates.AddSurrogate(typeof(IntVec2), new StreamingContext(StreamingContextStates.All), new IntVec2Surrogate());

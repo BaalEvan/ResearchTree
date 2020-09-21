@@ -212,10 +212,11 @@ namespace FluffyResearchTree
                     { 
                         ActiveTree = new Tree(tree);
                         ActiveTree.Initialized = true;
+                        return;
+
                     }
                 }
 
-                return;
             }
 
             // setup
