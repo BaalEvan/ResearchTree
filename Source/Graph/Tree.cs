@@ -9,16 +9,21 @@ namespace FluffyResearchTree
 {
     using System;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
+    using System.Runtime.Serialization;
+    using System.Runtime.Serialization.Formatters.Binary;
     using System.Text;
+    using global::ResearchTree;
     using global::ResearchTree.Graph;
     using RimWorld;
     using UnityEngine;
     using Verse;
 
+    [Serializable]
     public class Tree
     {
-        public const string ALL_TAB_NAME = "All";
+     public const string ALL_TAB_NAME = "All";
 
         public static Tree ActiveTree;
         public static Tree AllTreeTab;
@@ -37,7 +42,7 @@ namespace FluffyResearchTree
         public IntVec2 Size = IntVec2.Zero;
         public string TabName;
         public string TabLabel;
-        private  Rect _treeRect;
+        private Rect _treeRect;
 
         public Rect TreeRect
         {
@@ -76,7 +81,7 @@ namespace FluffyResearchTree
             AllTreeTab = allTree;
 
             Trees.Add(ALL_TAB_NAME, allTree);
-            Tabs.Add(new ResearchTabDef(){defName = "All"});
+            Tabs.Add(new ResearchTabDef(){defName = ALL_TAB_NAME});
             return allTree;
         }
 
@@ -99,9 +104,8 @@ namespace FluffyResearchTree
                         .Cast<TechLevel>()
                         // filter down to relevant tech levels only.
                         .Where(
-                            tl => (TabName==ALL_TAB_NAME? DefDatabase<ResearchProjectDef>.AllDefsListForReading:DefDatabase<ResearchProjectDef>.AllDefsListForReading.Where(def => def.tab.defName == TabName)).Any(
-                                rp => rp.techLevel ==
-                                      tl))
+                            tl => (TabName==ALL_TAB_NAME?DefDatabase<ResearchProjectDef>.AllDefsListForReading:DefDatabase<ResearchProjectDef>.AllDefsListForReading.Where(def => def.tab.defName == TabName))
+                                .Any(rp => rp.techLevel == tl))
                         .ToList();
                 return _relevantTechLevels;
             }
@@ -127,6 +131,65 @@ namespace FluffyResearchTree
 
                 return _edges;
             }
+        }
+
+        public void DrawSave(Rect visibleRect)
+        {
+            var mouseOver = Mouse.IsOver(visibleRect);
+            if (Event.current.type == EventType.Repaint)
+            {
+                // researches that are completed or could be started immediately, and that have the required building(s) available
+                GUI.color = mouseOver ? GenUI.MouseoverColor : Assets.ColorCompleted[TechLevel.Industrial];
+
+                if (mouseOver)
+                    GUI.DrawTexture(visibleRect, Assets.ButtonActive);
+                else
+                    GUI.DrawTexture(visibleRect, Assets.Button);
+
+                var progressBarRect = visibleRect.ContractedBy(3f);
+                GUI.color = Assets.ColorAvailable[TechLevel.Spacer];
+               // progressBarRect.xMin += (isActive ? 1f : 0f) * progressBarRect.width;
+                GUI.DrawTexture(progressBarRect, BaseContent.WhiteTex);
+
+                GUI.color = Color.white;
+
+
+                Text.Anchor = TextAnchor.MiddleCenter;
+                Text.WordWrap = false;
+                Text.Font = visibleRect.width > 100 ? GameFont.Small : GameFont.Tiny;
+                Widgets.Label(visibleRect, "Save");
+
+            }
+
+            var btn = Widgets.ButtonInvisible(visibleRect);
+
+            if (btn)
+            {
+                FileStream fs = new FileStream(GetCachePatchForTab(TabName), FileMode.Create);
+                BinaryFormatter bf = new BinaryFormatter();
+                var surrogates = new SurrogateSelector();
+                surrogates.AddSurrogate(typeof(IntVec2), new StreamingContext(StreamingContextStates.All), new IntVec2Surrogate());
+                surrogates.AddSurrogate(typeof(Rect), new StreamingContext(StreamingContextStates.All), new RectSurrogate());
+                surrogates.AddSurrogate(typeof(IntRange), new StreamingContext(StreamingContextStates.All), new IntRangeSurrogate());
+                surrogates.AddSurrogate(typeof(Vector2), new StreamingContext(StreamingContextStates.All), new Vector2Surrogate());
+                surrogates.AddSurrogate(typeof(ResearchProjectDef), new StreamingContext(StreamingContextStates.All), new ResearchProjectDefSurrogate());
+                bf.SurrogateSelector = surrogates;
+                try
+                {
+                    bf.Serialize(fs, this);
+                    Log.Debug("Edges" + Edges.Count);
+
+                }
+                catch (SerializationException e)
+                {
+                    Log.Error("Failed to serialize. Reason: " + e.Message,true);
+                }
+                finally
+                {
+                    fs.Close();
+                }
+            }
+
         }
 
         public void DrawTab(Rect visibleRect)
@@ -170,6 +233,25 @@ namespace FluffyResearchTree
                 }
         }
 
+        public Tree (Tree loadedTree)
+        {
+            // Log.Debug(loadedTree);
+            Log.Debug(loadedTree!=null?"exist":"ddupa");
+            _edges = loadedTree.Edges;
+            Log.Debug("Edges"+ Edges.Count);
+            _nodes = loadedTree.Nodes;
+            Log.Debug("Nodes" + Nodes.Count);
+
+            _relevantTechLevels = loadedTree._relevantTechLevels;
+            _techLevelBounds = loadedTree._techLevelBounds;
+            Initialized = loadedTree.Initialized;
+            OrderDirty = loadedTree.OrderDirty;
+            Size = loadedTree.Size;
+            TabName = loadedTree.TabName;
+            TabLabel = loadedTree.TabLabel;
+            _treeRect = loadedTree._treeRect;
+        }
+
 //        [SyncMethod]
         public void Initialize()
         {
@@ -179,6 +261,10 @@ namespace FluffyResearchTree
             if (_initializing)
                 return;
             _initializing = true;
+            if (LoadFromCache())
+            {
+                return;
+            }
 
             // setup
             LongEventHandler.QueueLongEvent(CheckPrerequisites, "Fluffy.ResearchTree.PreparingTree.Setup." + TabName, false,
@@ -216,6 +302,67 @@ namespace FluffyResearchTree
             // tell research tab we're ready
             LongEventHandler.QueueLongEvent(MainTabWindow_ResearchTree.Instance.Notify_TreeInitialized,
                 "Fluffy.ResearchTree.RestoreQueue." + TabName, false, null);
+
+        }
+
+        private string GetCachePatchForTab(string tabName)
+        {
+            if (!Directory.Exists("ResearchTabConfig"))
+            {
+                Directory.CreateDirectory("ResearchTabConfig");
+            }
+
+            return Path.Combine("ResearchTabConfig", tabName + ".dat");
+        }
+
+        private bool LoadFromCache()
+        {
+            if (!File.Exists(GetCachePatchForTab(TabName)))
+            {
+                return false;
+            }
+
+            BinaryFormatter bf = new BinaryFormatter();
+            var surrogates = new SurrogateSelector();
+            surrogates.AddSurrogate(typeof(IntVec2), new StreamingContext(StreamingContextStates.All), new IntVec2Surrogate());
+            surrogates.AddSurrogate(typeof(Rect), new StreamingContext(StreamingContextStates.All), new RectSurrogate());
+            surrogates.AddSurrogate(typeof(IntRange), new StreamingContext(StreamingContextStates.All), new IntRangeSurrogate());
+            surrogates.AddSurrogate(typeof(ResearchProjectDef), new StreamingContext(StreamingContextStates.All), new ResearchProjectDefSurrogate());
+            surrogates.AddSurrogate(typeof(Vector2), new StreamingContext(StreamingContextStates.All), new Vector2Surrogate());
+
+            bf.SurrogateSelector = surrogates;
+            
+            FileStream load = new FileStream(GetCachePatchForTab(TabName), FileMode.Open);
+
+            Tree loadedTree = new Tree();
+            try
+            {
+                loadedTree = (Tree) bf.Deserialize(load);
+            }
+            catch (SerializationException e)
+            {
+                Log.Debug("Failed to Deserialize. Reason: " + e.Message);
+                load.Close();
+
+                return false;
+            }
+            finally
+            {
+                if (loadedTree == null || string.IsNullOrEmpty(loadedTree.TabName) || string.IsNullOrEmpty(loadedTree.TabLabel))
+                {
+                    Log.Debug("FAILED");
+                }
+
+                Log.Debug("TEST");
+                Log.Debug(loadedTree.TabLabel);
+                load.Close();
+
+                Tree.ActiveTree = new Tree(loadedTree);
+                Tree.ActiveTree.Initialized = true;
+            }
+
+            return true;
+
         }
 
         private void RemoveEmptyRows()
@@ -685,7 +832,7 @@ namespace FluffyResearchTree
             {
                 // populate all nodes
                 _nodes = new List<Node>(DefDatabase<ResearchProjectDef>.AllDefsListForReading
-                    .Where(def => def.tab.defName == TabName)
+                .Where(def => def.tab.defName == TabName)
                     .Except(hidden)
                     .Except(locked)
                     .Select(def => new ResearchNode(def) as Node));
@@ -697,7 +844,7 @@ namespace FluffyResearchTree
                 foreach (var node in _nodes)
                 {
                     var missedNodes = (node as ResearchNode).Research.Ancestors().Where(n => n.tab.defName != TabName);
-
+                
                     foreach (var researchProjectDef in missedNodes.Except(hidden).Except(locked).Except(addedDefs))
                     {
                         Verse.Log.Message("NameDef");
@@ -715,13 +862,13 @@ namespace FluffyResearchTree
                         Verse.Log.Message("Find");
                         var r = l.Find(n => n != null && n.Research != null && n.Research.defName == researchProjectDef.defName);
                         Verse.Log.Message("Fake");
-
+                
                         nodesToAdd.Add(new FakeResearchNode(r)); //.Find(n=>n.r)
                     }
-
+                
                     addedDefs.AddRange(missedNodes);
                 }
-
+                
                 _nodes.AddRange(nodesToAdd.Distinct());
                 _nodes.RemoveAll(n => n == null);
 

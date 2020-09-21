@@ -8,6 +8,7 @@ using static FluffyResearchTree.Constants;
 
 namespace FluffyResearchTree
 {
+    [Serializable]
     public class Edge<T1, T2> where T1 : Node where T2 : Node
     {
         private T1 _in;

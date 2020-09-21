@@ -77,7 +77,7 @@ namespace FluffyResearchTree
             {
                 var childrenNodes = children
                     .Where(def => !def.IsFinished && IsQueued(def))
-                    .Select(def => def.ResearchNode()).ToList();
+                    .Select(def => def.ResearchNodeForQueue()).ToList();
                 foreach (var child in childrenNodes) SortRequiredRecursive(child);
             }
 
@@ -87,7 +87,7 @@ namespace FluffyResearchTree
         private static void SortRequiredRecursive(ResearchNode node)
         {
             var indexToPlace = _instance._queue.IndexOf(node);
-            var requiredResearchNodes = node.GetMissingRequiredRecursive().ToList();
+            var requiredResearchNodes = node.GetMissingRequiredRecursiveFromAll().ToList();
             foreach (var requiredResearchNode in requiredResearchNodes)
                 if (IsQueued(requiredResearchNode))
                 {
@@ -108,7 +108,7 @@ namespace FluffyResearchTree
             _instance._queue.Remove(node);
 
             // remove all nodes that depend on it
-            var followUps = _instance._queue.Where(n => n.GetMissingRequiredRecursive().Contains(node)).ToList();
+            var followUps = _instance._queue.Where(n => n.GetMissingRequiredRecursiveFromAll().Contains(node)).ToList();
             foreach (var followUp in followUps)
                 _instance._queue.Remove(followUp);
 
@@ -128,6 +128,16 @@ namespace FluffyResearchTree
                     var main = ColorCompleted[node.Research.techLevel];
                     var background = i > 1 ? ColorUnavailable[node.Research.techLevel] : main;
                     DrawLabel(node.QueueRect, main, background, i);
+                }
+
+                foreach (var fakeResearchNode in node.fakeLinks)
+                {
+                    if (fakeResearchNode.IsVisible(visibleRect))
+                    {
+                        var main = ColorCompleted[node.Research.techLevel];
+                        var background = i > 1 ? ColorUnavailable[node.Research.techLevel] : main;
+                        DrawLabel(fakeResearchNode.QueueRect, main, background, i);
+                    }
                 }
 
                 i++;
@@ -275,7 +285,7 @@ namespace FluffyResearchTree
                 foreach (var research in _saveableQueue)
                 {
                     // find a node that matches the research - or null if none found
-                    var node = research.ResearchNode();
+                    var node = research.ResearchNodeForQueue();
 
                     // enqueue the node
                     if (node != null)

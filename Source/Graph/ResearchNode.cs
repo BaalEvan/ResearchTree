@@ -12,6 +12,10 @@ using static FluffyResearchTree.Constants;
 
 namespace FluffyResearchTree
 {
+    using System;
+    using global::ResearchTree.Graph;
+
+    [Serializable]
     public class ResearchNode : Node
     {
         private static readonly Dictionary<ResearchProjectDef, bool> _buildingPresentCache =
@@ -21,6 +25,9 @@ namespace FluffyResearchTree
             new Dictionary<ResearchProjectDef, List<ThingDef>>();
 
         public ResearchProjectDef Research;
+
+        public List<FakeResearchNode> fakeLinks = new List<FakeResearchNode>();
+        public ResearchNode mainNode;
 
         public ResearchNode( ResearchProjectDef research )
         {
@@ -78,9 +85,6 @@ namespace FluffyResearchTree
             }
         }
 
-        public override bool Completed => Research.IsFinished;
-        public override bool Available => !Research.IsFinished && ( DebugSettings.godMode || BuildingPresent() );
-
         public override string Label => Research.LabelCap;
 
         public bool isBeingDrag;
@@ -110,6 +114,11 @@ namespace FluffyResearchTree
             // update cache
             _buildingPresentCache.Add( research, result );
             return result;
+        }
+
+        public static bool TechprintAvailable( ResearchProjectDef research )
+        {
+            return research.TechprintRequirementMet;
         }
 
         public static void ClearCaches()
@@ -183,6 +192,11 @@ namespace FluffyResearchTree
         {
             return BuildingPresent( Research );
         }
+        
+        public bool TechprintAvailable()
+        {
+            return TechprintAvailable( Research );
+        }
 
         /// <summary>
         ///     Draw the node, including interactions.
@@ -231,7 +245,7 @@ namespace FluffyResearchTree
                     Text.Anchor   = TextAnchor.UpperLeft;
                     Text.WordWrap = false;
                     Text.Font     = _largeLabel ? GameFont.Tiny : GameFont.Small;
-                    Widgets.Label( LabelRect, Research.LabelCap );
+                    Widgets.Label( LabelRect, Research.tab.defName+" - "+Research.LabelCap );
                 }
                 else
                 {
@@ -256,14 +270,14 @@ namespace FluffyResearchTree
                 // attach description and further info to a tooltip
                 TooltipHandler.TipRegion( Rect, GetResearchTooltipString, Research.GetHashCode() );
                 if ( !BuildingPresent() )
-                    TooltipHandler.TipRegion( Rect,
-                                              "Fluffy.ResearchTree.MissingFacilities".Translate( string.Join( ", ",
-                                                                                                              MissingFacilities()
-                                                                                                                 .Select(
-                                                                                                                      td =>
-                                                                                                                          td
-                                                                                                                             .LabelCap )
-                                                                                                                 .ToArray() ) ) );
+                    TooltipHandler.TipRegion( Rect, "Fluffy.ResearchTree.MissingFacilities".Translate(
+                                                  string.Join( ", ",
+                                                               MissingFacilities()
+                                                                  .Select( td => td.LabelCap ).ToArray() ) ) );
+
+                else if ( !TechprintAvailable() )
+                    TooltipHandler.TipRegion( Rect, "Fluffy.ResearchTree.MissingTechprints".Translate(
+                                                  Research.TechprintsApplied, Research.techprintCount ) );
 
                 // draw unlock icons
                 if ( detailedMode )
@@ -305,8 +319,17 @@ namespace FluffyResearchTree
                     if ( Available )
                     {
                         Highlighted = true;
-                        foreach ( var prerequisite in GetMissingRequiredRecursive() )
+                        foreach ( var prerequisite in GetMissingRequiredRecursiveFromAll() )
                             prerequisite.Highlighted = true;
+                        foreach (var fakeResearchNode in fakeLinks)
+                        {
+                            fakeResearchNode.Highlighted = true;
+                        }
+
+                        if (this is FakeResearchNode fake)
+                        {
+                            fake.LinkedNode.Highlighted = true;
+                        }
                     }
                     // highlight children if completed
                     else if ( Completed )
@@ -319,7 +342,7 @@ namespace FluffyResearchTree
 
             var btn = Widgets.ButtonInvisibleDraggable(Rect);
             // if clicked and not yet finished, queue up this research and all prereqs.
-            if ( btn == Widgets.DraggableResult.Pressed && BuildingPresent() )
+            if ( Widgets.ButtonInvisible( Rect ) && Available )
             {
                 // LMB is queue operations, RMB is info
                 if ( Event.current.button == 0 && !Research.IsFinished )
@@ -363,7 +386,7 @@ namespace FluffyResearchTree
             if (!Queue.IsQueued(this))
             {
                 // if shift is held, add to queue, otherwise replace queue
-                var queue = GetMissingRequiredRecursive()
+                var queue = GetMissingRequiredRecursiveFromAll()
                     .Concat(new List<ResearchNode>(new[] {this}))
                     .Distinct();
                 if (Event.current.control)
@@ -396,6 +419,25 @@ namespace FluffyResearchTree
 
             return allParents.Distinct().ToList();
         }
+
+        /// <summary>
+        ///     Get recursive list of all incomplete prerequisites
+        /// </summary>
+        /// <returns>List<Node> prerequisites</Node></returns>
+        public List<ResearchNode> GetMissingRequiredRecursiveFromAll()
+        {
+            var parents = Research.prerequisites?.Where(rpd => !rpd.IsFinished).Select(rpd => rpd.ResearchNodeForQueue());
+            if (parents == null)
+                return new List<ResearchNode>();
+            var allParents = new List<ResearchNode>(parents);
+            foreach (var parent in parents)
+                allParents.AddRange(parent.GetMissingRequiredRecursiveFromAll());
+
+            return allParents.Distinct().ToList();
+        }
+
+        public override bool Completed => Research.IsFinished;
+        public override bool Available => !Research.IsFinished && ( DebugSettings.godMode || (BuildingPresent() && TechprintAvailable()));
 
         public List<ThingDef> MissingFacilities()
         {

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <ModMetaData>
-  <name>Research Tree</name>
-  <author>Fluffy</author>
+  <name>Research Tree - BaalEvan Fork</name>
+  <author>Fluffy + BaalEvan</author>
   <url>https://ludeon.com/forums/index.php?topic=16120</url>
   <description>A better research tree.
 
@@ -50,19 +50,20 @@ Luckily, the crossing reduction and edge length reduction steps partially achiev
 &lt;size=24&gt;Contributors&lt;/size&gt;
 
 Templarr:    Russian translation
-Temp:    
 Suh. Junmin:    Korean translation
 rw-chaos:    German translation
 53N4:    Spanish translation
 Silverside:    Fix UI scaling bug for vertical text
 shiuanyue:    Chinese (traditional) translation
+notfood:    Implement techprint requirements
+HanYaodong:    Add simplified Chinese translation
 
 &lt;size=24&gt;Version&lt;/size&gt;
-This is version 3.13.503, for RimWorld 1.1.2575.
+This is version 3.17.534, for RimWorld 1.1.2654.
 
 </description>
   <supportedVersions>
-    <li>1.1</li>
+    <li>1.2</li>
   </supportedVersions>
   <packageId>fluffy.researchtree</packageId>
   <modDependencies>

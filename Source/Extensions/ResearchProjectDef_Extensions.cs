@@ -8,6 +8,9 @@ using Verse;
 
 namespace FluffyResearchTree
 {
+    using System;
+    using global::ResearchTree.Graph;
+
     public static class ResearchProjectDef_Extensions
     {
         private static readonly Dictionary<Def, List<Pair<Def, string>>> _unlocksCache =
@@ -147,10 +150,23 @@ namespace FluffyResearchTree
 
         public static ResearchNode ResearchNode( this ResearchProjectDef research )
         {
-            var node = Tree.AllTreeTab.Nodes.OfType<ResearchNode>().FirstOrDefault( n => n.Research == research );
-
+            var node = Tree.ActiveTree.Nodes.OfType<ResearchNode>().FirstOrDefault( n => n.Research == research );
+          
             if ( node == null )
                 Log.Error( "Node for {0} not found. Was it intentionally hidden or locked?", true, research.LabelCap );
+            return node;
+        }
+
+        public static ResearchNode ResearchNodeForQueue(this ResearchProjectDef research)
+        {
+            var node = Tree.ActiveTree.Nodes.OfType<ResearchNode>().FirstOrDefault(n => n.Research == research);
+            if (node is FakeResearchNode fake)
+            {
+                node = fake.LinkedNode;
+            }
+
+            if (node == null)
+                Log.Error("Node for {0} not found. Was it intentionally hidden or locked?", true, research.LabelCap);
             return node;
         }
     }

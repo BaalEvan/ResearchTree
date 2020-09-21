@@ -6,6 +6,9 @@ using UnityEngine;
 
 namespace FluffyResearchTree
 {
+    using System;
+
+    [Serializable]
     public class DummyNode : Node
     {
         #region Overrides of Node

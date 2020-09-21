@@ -8,14 +8,14 @@ namespace ResearchTree.Graph
 {
     using FluffyResearchTree;
     using Verse;
-
-    class FakeResearchNode : ResearchNode
+    [Serializable]
+   public class FakeResearchNode : ResearchNode
     {
         public ResearchNode LinkedNode;
         public FakeResearchNode(ResearchNode node) : base(research: node.Research)
         {
             LinkedNode = node;
-            
+            node.fakeLinks.Add(this);
         }
 
         protected override void OnClick()

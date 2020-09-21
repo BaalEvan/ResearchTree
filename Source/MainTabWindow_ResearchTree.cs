@@ -10,6 +10,11 @@ using static FluffyResearchTree.Constants;
 
 namespace FluffyResearchTree
 {
+    using System.IO;
+    using System.Runtime.Serialization;
+    using System.Runtime.Serialization.Formatters.Binary;
+    using global::ResearchTree;
+
     public class MainTabWindow_ResearchTree : MainTabWindow
     {
         internal static Vector2 _scrollPosition = Vector2.zero;
@@ -29,6 +34,8 @@ namespace FluffyResearchTree
         private bool _viewRectDirty       = true;
 
         private float _zoomLevel = 1f;
+
+        private bool _showTabs;
 
         public MainTabWindow_ResearchTree()
         {
@@ -122,17 +129,22 @@ namespace FluffyResearchTree
 
             if (Tree.ActiveTree == null)
             {
-                if (!Tree.Trees.ContainsKey("Main"))
-                {
-                    Tree.ActiveTree = new Tree(DefDatabase <ResearchTabDef>.GetNamed("Main"));
-                    Tree.ActiveTree.Initialize();
-                }
+                Tree.ActiveTree = Tree.AllTab();
+                Tree.ActiveTree.Initialize();
+                // if (!Tree.Trees.ContainsKey("Main"))
+                // {
+                //
+                //         Tree.ActiveTree = new Tree(DefDatabase<ResearchTabDef>.GetNamed("Main"));
+                //         Tree.ActiveTree.Initialize();
+                //     
+                //
+                // }
 
 
                 var projects = DefDatabase<ResearchProjectDef>.AllDefsListForReading;
 
                 var groups = projects.GroupBy(def => def.tab);
-                Tree.AllTab();//.Initialize();
+                // Tree.AllTab();//.Initialize();
 
                 foreach (var @group in groups)
                 {
@@ -234,6 +246,13 @@ namespace FluffyResearchTree
             var tabAmount = Tree.Tabs.Count;
             var resolution = UI.screenWidth;
             var size = Mathf.Min(NodeSize.x + Margin, (resolution - 2 * Margin) / tabAmount);
+            Tree.ActiveTree.DrawSave(new Rect(
+                pos.x,
+                pos.y,
+                size,
+                NodeSize.y / 2 + Margin));
+            pos.x += size;
+
             for (var i = 0; i < Tree.Tabs.Count && pos.x + NodeSize.x < canvas.xMax; i++)
             {
                 var node = Tree.Trees[Tree.Tabs[i].defName];
