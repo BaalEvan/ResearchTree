@@ -133,22 +133,17 @@ namespace FluffyResearchTree
 
             if (Tree.ActiveTree == null)
             {
-                Tree.ActiveTree = Tree.AllTab();
-                Tree.ActiveTree.Initialize();
-                // if (!Tree.Trees.ContainsKey("Main"))
-                // {
-                //
-                //         Tree.ActiveTree = new Tree(DefDatabase<ResearchTabDef>.GetNamed("Main"));
-                //         Tree.ActiveTree.Initialize();
-                //     
-                //
-                // }
+                if (!CacheIO.VerifyHash())
+                {
+                    Tree.ActiveTree = Tree.AllTab();
+                    Tree.ActiveTree.Initialize();
+                }
+
 
 
                 var projects = DefDatabase<ResearchProjectDef>.AllDefsListForReading;
 
                 var groups = projects.GroupBy(def => def.tab);
-                // Tree.AllTab();//.Initialize();
 
                 foreach (var @group in groups)
                 {
@@ -237,7 +232,6 @@ namespace FluffyResearchTree
 
             HandleZoom(verticalTabBar);
 
-            Log.Debug(verticalTabBar.Contains(Event.current.mousePosition)?"in":"out");
 
             GUI.EndGroup();
             GUI.EndScrollView( false );

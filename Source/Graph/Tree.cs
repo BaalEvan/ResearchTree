@@ -13,6 +13,7 @@ namespace FluffyResearchTree
     using System.Linq;
     using System.Runtime.Serialization;
     using System.Runtime.Serialization.Formatters.Binary;
+    using System.Security.Cryptography;
     using System.Text;
     using global::ResearchTree;
     using global::ResearchTree.Graph;
@@ -133,66 +134,7 @@ namespace FluffyResearchTree
             }
         }
 
-        public void DrawSave(Rect visibleRect)
-        {
-            var mouseOver = Mouse.IsOver(visibleRect);
-            if (Event.current.type == EventType.Repaint)
-            {
-                // researches that are completed or could be started immediately, and that have the required building(s) available
-                GUI.color = mouseOver ? GenUI.MouseoverColor : Assets.ColorCompleted[TechLevel.Industrial];
-
-                if (mouseOver)
-                    GUI.DrawTexture(visibleRect, Assets.ButtonActive);
-                else
-                    GUI.DrawTexture(visibleRect, Assets.Button);
-
-                var progressBarRect = visibleRect.ContractedBy(3f);
-                GUI.color = Assets.ColorAvailable[TechLevel.Spacer];
-               // progressBarRect.xMin += (isActive ? 1f : 0f) * progressBarRect.width;
-                GUI.DrawTexture(progressBarRect, BaseContent.WhiteTex);
-
-                GUI.color = Color.white;
-
-
-                Text.Anchor = TextAnchor.MiddleCenter;
-                Text.WordWrap = false;
-                Text.Font = visibleRect.width > 100 ? GameFont.Small : GameFont.Tiny;
-                Widgets.Label(visibleRect, "Save");
-
-            }
-
-            var btn = Widgets.ButtonInvisible(visibleRect);
-
-            if (btn)
-            {
-                FileStream fs = new FileStream(GetCachePatchForTab(TabName), FileMode.Create);
-                BinaryFormatter bf = new BinaryFormatter();
-                var surrogates = new SurrogateSelector();
-                surrogates.AddSurrogate(typeof(IntVec2), new StreamingContext(StreamingContextStates.All), new IntVec2Surrogate());
-                surrogates.AddSurrogate(typeof(Rect), new StreamingContext(StreamingContextStates.All), new RectSurrogate());
-                surrogates.AddSurrogate(typeof(IntRange), new StreamingContext(StreamingContextStates.All), new IntRangeSurrogate());
-                surrogates.AddSurrogate(typeof(Vector2), new StreamingContext(StreamingContextStates.All), new Vector2Surrogate());
-                surrogates.AddSurrogate(typeof(ResearchProjectDef), new StreamingContext(StreamingContextStates.All), new ResearchProjectDefSurrogate());
-                bf.SurrogateSelector = surrogates;
-                try
-                {
-                    bf.Serialize(fs, this);
-                    Log.Debug("Edges" + Edges.Count);
-
-                }
-                catch (SerializationException e)
-                {
-                    Log.Error("Failed to serialize. Reason: " + e.Message,true);
-                }
-                finally
-                {
-                    fs.Close();
-                }
-            }
-
-        }
-
-        public void DrawTab(Rect visibleRect)
+      public void DrawTab(Rect visibleRect)
         {
             var mouseOver = Mouse.IsOver(visibleRect);
             var isActive = ActiveTree.TabName == TabName;
@@ -235,12 +177,8 @@ namespace FluffyResearchTree
 
         public Tree (Tree loadedTree)
         {
-            // Log.Debug(loadedTree);
-            Log.Debug(loadedTree!=null?"exist":"ddupa");
             _edges = loadedTree.Edges;
-            Log.Debug("Edges"+ Edges.Count);
             _nodes = loadedTree.Nodes;
-            Log.Debug("Nodes" + Nodes.Count);
 
             _relevantTechLevels = loadedTree._relevantTechLevels;
             _techLevelBounds = loadedTree._techLevelBounds;
@@ -250,6 +188,8 @@ namespace FluffyResearchTree
             TabName = loadedTree.TabName;
             TabLabel = loadedTree.TabLabel;
             _treeRect = loadedTree._treeRect;
+
+            Trees[TabName] = this;
         }
 
 //        [SyncMethod]
@@ -261,8 +201,20 @@ namespace FluffyResearchTree
             if (_initializing)
                 return;
             _initializing = true;
-            if (LoadFromCache())
+
+            if (CacheIO.CacheShouldBeLoaded)
             {
+                Log.Message("Loading from Cache");
+                var tree = CacheIO.LoadFromCache(TabName);
+                if (tree != null)
+                {
+                    if (tree != ActiveTree)
+                    { 
+                        ActiveTree = new Tree(tree);
+                        ActiveTree.Initialized = true;
+                    }
+                }
+
                 return;
             }
 
@@ -296,7 +248,7 @@ namespace FluffyResearchTree
 #endif
 
             // done!
-            LongEventHandler.QueueLongEvent(() => { Initialized = true; }, "Fluffy.ResearchTree.PreparingTree.Layout." + TabName,
+            LongEventHandler.QueueLongEvent(() => { Initialized = true; CacheIO.SaveTab(this);}, "Fluffy.ResearchTree.PreparingTree.Layout." + TabName,
                 false, null);
 
             // tell research tab we're ready
@@ -305,65 +257,7 @@ namespace FluffyResearchTree
 
         }
 
-        private string GetCachePatchForTab(string tabName)
-        {
-            if (!Directory.Exists("ResearchTabConfig"))
-            {
-                Directory.CreateDirectory("ResearchTabConfig");
-            }
-
-            return Path.Combine("ResearchTabConfig", tabName + ".dat");
-        }
-
-        private bool LoadFromCache()
-        {
-            if (!File.Exists(GetCachePatchForTab(TabName)))
-            {
-                return false;
-            }
-
-            BinaryFormatter bf = new BinaryFormatter();
-            var surrogates = new SurrogateSelector();
-            surrogates.AddSurrogate(typeof(IntVec2), new StreamingContext(StreamingContextStates.All), new IntVec2Surrogate());
-            surrogates.AddSurrogate(typeof(Rect), new StreamingContext(StreamingContextStates.All), new RectSurrogate());
-            surrogates.AddSurrogate(typeof(IntRange), new StreamingContext(StreamingContextStates.All), new IntRangeSurrogate());
-            surrogates.AddSurrogate(typeof(ResearchProjectDef), new StreamingContext(StreamingContextStates.All), new ResearchProjectDefSurrogate());
-            surrogates.AddSurrogate(typeof(Vector2), new StreamingContext(StreamingContextStates.All), new Vector2Surrogate());
-
-            bf.SurrogateSelector = surrogates;
-            
-            FileStream load = new FileStream(GetCachePatchForTab(TabName), FileMode.Open);
-
-            Tree loadedTree = new Tree();
-            try
-            {
-                loadedTree = (Tree) bf.Deserialize(load);
-            }
-            catch (SerializationException e)
-            {
-                Log.Debug("Failed to Deserialize. Reason: " + e.Message);
-                load.Close();
-
-                return false;
-            }
-            finally
-            {
-                if (loadedTree == null || string.IsNullOrEmpty(loadedTree.TabName) || string.IsNullOrEmpty(loadedTree.TabLabel))
-                {
-                    Log.Debug("FAILED");
-                }
-
-                Log.Debug("TEST");
-                Log.Debug(loadedTree.TabLabel);
-                load.Close();
-
-                Tree.ActiveTree = new Tree(loadedTree);
-                Tree.ActiveTree.Initialized = true;
-            }
-
-            return true;
-
-        }
+      
 
         private void RemoveEmptyRows()
         {

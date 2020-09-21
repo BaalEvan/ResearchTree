@@ -67,6 +67,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets.cs" />
+    <Compile Include="CacheIO.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="Extensions\Building_ResearchBench_Extensions.cs" />
     <Compile Include="Extensions\Def_Extensions.cs" />
