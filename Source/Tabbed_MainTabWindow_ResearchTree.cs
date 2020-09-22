@@ -129,6 +129,7 @@ namespace FluffyResearchTree
         public override void PreOpen()
         {
             base.PreOpen();
+            
             SetRects();
 
             if (Tree.ActiveTree == null)

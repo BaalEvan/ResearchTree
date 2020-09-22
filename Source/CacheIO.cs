@@ -22,7 +22,12 @@ namespace ResearchTree
 
         public static bool VerifyHash()
         {
-            return !AnyModChanges(LoadHash());
+            var hash = LoadHash();
+            if (string.IsNullOrEmpty(hash))
+            {
+                SaveHash();
+            }
+            return !AnyModChanges(hash);
         }
 
         private static bool AnyModChanges(string oldHash)
@@ -36,7 +41,7 @@ namespace ResearchTree
             return !CacheShouldBeLoaded;
         }
 
-        private static string GetHash()
+        private static string GetHash() 
         {
             var modlist = string.Concat(ModsConfig.ActiveModsInLoadOrder.Select(m => m.PackageId + m.Active + m.Description));
 
@@ -67,7 +72,7 @@ namespace ResearchTree
 
         private static void SaveHash()
         {
-            FileStream load = new FileStream(GetCachePatchForTab("hash"), FileMode.Truncate);
+            FileStream load = new FileStream(GetCachePatchForTab("hash"), FileMode.Create);
             StreamWriter sw = new StreamWriter(load);
             sw.WriteLine(GetHash());
             sw.Close();
@@ -89,7 +94,7 @@ namespace ResearchTree
         {
             SaveHash();
 
-            FileStream fs = new FileStream(GetCachePatchForTab(tabTree.TabName), FileMode.Truncate);
+            FileStream fs = new FileStream(GetCachePatchForTab(tabTree.TabName), FileMode.Create);
             BinaryFormatter bf = new BinaryFormatter();
             var surrogates = new SurrogateSelector();
             surrogates.AddSurrogate(typeof(IntVec2), new StreamingContext(StreamingContextStates.All), new IntVec2Surrogate());
