@@ -14,6 +14,8 @@ namespace FluffyResearchTree
     {
         public ResearchTree( ModContentPack content ) : base( content )
         {
+            Log.Message("Tabbed Research Tree - Init");
+
             var loadedMods = ModsConfig.ActiveModsInLoadOrder.ToList();
 
             if (loadedMods.Exists(m => m.PackageId == this.Content.PackageId && m.OnSteamWorkshop == true) )
@@ -22,21 +24,21 @@ namespace FluffyResearchTree
                 return;
             }
 
-            if (!ModsConfig.IsActive("Fluffy.ResearchTree"))
-            {
-                Log.Error("Fluffy's Research Tab isn't active", true);
-                return;
-            }
+            // if (!ModsConfig.IsActive("Fluffy.ResearchTree"))
+            // {
+            //     Log.Error("Fluffy's Research Tab isn't active", true);
+            //     return;
+            // }
 
             var harmony = new Harmony( "Fluffy.ResearchTree.Tabbed" );
 
-            if (ModsConfig.IsActive("Fluffy.ResearchTree"))
-            {
-                Log.Message( "Unpatching Fluffy's Research Tab");
-                harmony.UnpatchAll("Fluffy.ResearchTree");
-            }
+            // if (ModsConfig.IsActive("Fluffy.ResearchTree"))
+            // {
+            //     Log.Message( "Unpatching Fluffy's Research Tree");
+            //     harmony.UnpatchAll("Fluffy.ResearchTree");
+            // }
 
-            Log.Message( "Patching Tabbed Fluffy's Research Tab");
+            Log.Message( "Patching Tabbed Fluffy's Research Tree");
             harmony.PatchAll( Assembly.GetExecutingAssembly() );
 
         }
