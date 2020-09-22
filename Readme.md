@@ -1,10 +1,17 @@
-[![RimWorld 1.1](https://img.shields.io/badge/RimWorld-1.1-brightgreen.svg)](http://rimworldgame.com/)
+[![RimWorld 1.2](https://img.shields.io/badge/RimWorld-1.2-brightgreen.svg)](http://rimworldgame.com/)
 
-A better research tree.
+A better research tree - now with tabs.
+
+![IMPORTANT](https://banners.karel-kroeze.nl/title/IMPORTANT.png)
+ - Require original Fluffy's ResearchTree and can't be installed from workshop even if someone will upload it.
 
 
-  
-  
+![ForkFeatures](https://banners.karel-kroeze.nl/title/New%20Fork%20Features.png)
+ - Togglable tabs on right side of the screen
+ - Saving Research tree to drive (tree is generated only once per modlist)
+
+
+
 ![Features](https://banners.karel-kroeze.nl/title/Features.png)
  - automatically generated to maximize readability*. 
  - shows research projects, buildings, plants and recipes unlocked by each research project.
