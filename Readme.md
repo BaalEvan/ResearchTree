@@ -22,6 +22,7 @@ A better research tree - now with tabs.
   
   
 ![FAQ](https://banners.karel-kroeze.nl/title/FAQ.png)
+
 *Can I add/remove this from an existing save?*
 You can add it to existing saves without problems. Removing this mod will lead to some errors when loading, but these should not affect gameplay - and will go away after saving.
 
@@ -38,6 +39,7 @@ Yep. ResearchPal is based on a legacy version of this mod that was kept up-to-da
   
   
 ![Known Issues](https://banners.karel-kroeze.nl/title/Known%20Issues.png)
+
  - Layouts are not perfect, if you have experience with graph layouts - please do feel free to look at the source code, and/or implement a Sugiyama layout algorithm for me that runs in C
   
   
@@ -47,6 +49,7 @@ Yep. ResearchPal is based on a legacy version of this mod that was kept up-to-da
   
   
 ![Technical](https://banners.karel-kroeze.nl/title/Technical.png)
+
 So how does this all work?
 
 Creating an optimal layout is a known problem in the area of *Graph Theory*. There's serious mathematicians who've spent years of their live trying to figure out this problem, and numerous solutions exist. The group of solutions most relevant to our research tree (a *directed acyclic graph*, or *DAG*) is that derived from Sugiyama's work. Generally speaking, these algorithms have four steps;
@@ -66,6 +69,8 @@ Luckily, the crossing reduction and edge length reduction steps partially achiev
   
   
 ![Contributors](https://banners.karel-kroeze.nl/title/Contributors.png)
+ - Fluffy: Original Version
+ - BaalEvan: Tabbed Version
  - Templarr:	Russian translation
  - Suh. Junmin:	Korean translation
  - rw-chaos:	German translation
@@ -94,6 +99,9 @@ All current and past versions of this mod can be downloaded from [GitHub](https:
   
   
 ![License](https://banners.karel-kroeze.nl/title/License.png)
+
+Tabbed Version can't be uploaded to Workshop without Permission from BaalEvan AND Fluffy.
+I don't want to create third copy of ResearchTree and split users once again, so Tabbed Version can be downloaded only from this Github and require original ResearchTree
 
 All original code in this mod is licensed under the [MIT license](https://opensource.org/licenses/MIT). Do what you want, but give me credit.
 All original content (e.g. text, imagery, sounds) in this mod is licensed under the [CC-BY-SA 4.0 license](http://creativecommons.org/licenses/by-sa/4.0/).
