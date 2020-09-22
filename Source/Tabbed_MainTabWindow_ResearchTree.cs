@@ -134,13 +134,10 @@ namespace FluffyResearchTree
 
             if (Tree.ActiveTree == null)
             {
-                if (!CacheIO.VerifyHash())
-                {
-                    Tree.ActiveTree = Tree.AllTab();
-                    Tree.ActiveTree.Initialize();
-                }
+                CacheIO.VerifyHash();
 
-
+                Tree.ActiveTree = Tree.AllTab();
+                Tree.ActiveTree.Initialize();
 
                 var projects = DefDatabase<ResearchProjectDef>.AllDefsListForReading;
 

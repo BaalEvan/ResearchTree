@@ -212,6 +212,9 @@ namespace FluffyResearchTree
                     { 
                         ActiveTree = new Tree(tree);
                         ActiveTree.Initialized = true;
+
+                        LongEventHandler.QueueLongEvent(Tabbed_MainTabWindow_ResearchTree.Instance.Notify_TreeInitialized,
+                            "Fluffy.ResearchTree.RestoreQueue." + TabName, false, null);
                         return;
 
                     }
